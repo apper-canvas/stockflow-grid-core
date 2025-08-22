@@ -1,0 +1,44 @@
+[
+  {
+    "Id": 1,
+    "name": "Electronics",
+    "parentId": null,
+    "icon": "Smartphone",
+    "productCount": 5
+  },
+  {
+    "Id": 2,
+    "name": "Clothing",
+    "parentId": null,
+    "icon": "Shirt",
+    "productCount": 2
+  },
+  {
+    "Id": 3,
+    "name": "Home & Garden",
+    "parentId": null,
+    "icon": "Home",
+    "productCount": 3
+  },
+  {
+    "Id": 4,
+    "name": "Sports & Fitness",
+    "parentId": null,
+    "icon": "Heart",
+    "productCount": 1
+  },
+  {
+    "Id": 5,
+    "name": "Books & Media",
+    "parentId": null,
+    "icon": "Book",
+    "productCount": 0
+  },
+  {
+    "Id": 6,
+    "name": "Automotive",
+    "parentId": null,
+    "icon": "Car",
+    "productCount": 0
+  }
+]
