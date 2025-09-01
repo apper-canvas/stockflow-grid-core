@@ -1,81 +1,280 @@
-import categoriesData from "@/services/mockData/categories.json";
+import { toast } from 'react-toastify';
 
 class CategoryService {
   constructor() {
-    this.categories = [...categoriesData];
+    this.tableName = 'category_c';
+    this.apperClient = null;
+    this.initializeClient();
   }
 
-  // Simulate API delay
-  async delay(ms = 200) {
-    return new Promise(resolve => setTimeout(resolve, ms));
+  initializeClient() {
+    if (window.ApperSDK) {
+      const { ApperClient } = window.ApperSDK;
+      this.apperClient = new ApperClient({
+        apperProjectId: import.meta.env.VITE_APPER_PROJECT_ID,
+        apperPublicKey: import.meta.env.VITE_APPER_PUBLIC_KEY
+      });
+    }
+  }
+
+  ensureClient() {
+    if (!this.apperClient) {
+      this.initializeClient();
+    }
+    if (!this.apperClient) {
+      throw new Error('ApperClient not initialized');
+    }
   }
 
   async getAll() {
-    await this.delay();
-    return [...this.categories];
+    try {
+      this.ensureClient();
+      
+      const params = {
+        fields: [
+          {"field": {"Name": "Id"}},
+          {"field": {"Name": "Name"}},
+          {"field": {"Name": "parent_id_c"}},
+          {"field": {"Name": "icon_c"}},
+          {"field": {"Name": "product_count_c"}}
+        ],
+        orderBy: [{"fieldName": "Name", "sorttype": "ASC"}],
+        pagingInfo: {"limit": 100, "offset": 0}
+      };
+      
+      const response = await this.apperClient.fetchRecords(this.tableName, params);
+      
+      if (!response.success) {
+        console.error(response.message);
+        toast.error(response.message);
+        return [];
+      }
+      
+      if (!response.data || response.data.length === 0) {
+        return [];
+      }
+      
+      // Transform database fields to frontend format
+      return response.data.map(item => ({
+        Id: item.Id,
+        name: item.Name,
+        parentId: item.parent_id_c || null,
+        icon: item.icon_c || 'Box',
+        productCount: item.product_count_c || 0
+      }));
+    } catch (error) {
+      console.error("Error fetching categories:", error?.response?.data?.message || error);
+      return [];
+    }
   }
 
   async getById(id) {
-    await this.delay();
-    const category = this.categories.find(c => c.Id === id);
-    if (!category) {
+    try {
+      this.ensureClient();
+      
+      const params = {
+        fields: [
+          {"field": {"Name": "Id"}},
+          {"field": {"Name": "Name"}},
+          {"field": {"Name": "parent_id_c"}},
+          {"field": {"Name": "icon_c"}},
+          {"field": {"Name": "product_count_c"}}
+        ]
+      };
+      
+      const response = await this.apperClient.getRecordById(this.tableName, id, params);
+      
+      if (!response?.data) {
+        throw new Error("Category not found");
+      }
+      
+      // Transform database fields to frontend format
+      const item = response.data;
+      return {
+        Id: item.Id,
+        name: item.Name,
+        parentId: item.parent_id_c || null,
+        icon: item.icon_c || 'Box',
+        productCount: item.product_count_c || 0
+      };
+    } catch (error) {
+      console.error(`Error fetching category ${id}:`, error?.response?.data?.message || error);
       throw new Error("Category not found");
     }
-    return { ...category };
   }
 
   async create(categoryData) {
-    await this.delay();
-    const maxId = Math.max(...this.categories.map(c => c.Id), 0);
-    const newCategory = {
-      ...categoryData,
-      Id: maxId + 1,
-      productCount: 0
-    };
-    this.categories.push(newCategory);
-    return { ...newCategory };
+    try {
+      this.ensureClient();
+      
+      const params = {
+        records: [{
+          Name: categoryData.name,
+          parent_id_c: categoryData.parentId || null,
+          icon_c: categoryData.icon || 'Box',
+          product_count_c: 0
+        }]
+      };
+      
+      const response = await this.apperClient.createRecord(this.tableName, params);
+      
+      if (!response.success) {
+        console.error(response.message);
+        toast.error(response.message);
+        throw new Error(response.message);
+      }
+      
+      if (response.results) {
+        const successful = response.results.filter(r => r.success);
+        const failed = response.results.filter(r => !r.success);
+        
+        if (failed.length > 0) {
+          console.error(`Failed to create ${failed.length} records:`, failed);
+          failed.forEach(record => {
+            if (record.errors) {
+              record.errors.forEach(error => toast.error(`${error.fieldLabel}: ${error}`));
+            }
+            if (record.message) toast.error(record.message);
+          });
+          throw new Error("Failed to create category");
+        }
+        
+        if (successful.length > 0) {
+          const item = successful[0].data;
+          return {
+            Id: item.Id,
+            name: item.Name,
+            parentId: item.parent_id_c || null,
+            icon: item.icon_c || 'Box',
+            productCount: item.product_count_c || 0
+          };
+        }
+      }
+      
+      throw new Error("Failed to create category");
+    } catch (error) {
+      console.error("Error creating category:", error?.response?.data?.message || error);
+      throw error;
+    }
   }
 
   async update(id, categoryData) {
-    await this.delay();
-    const index = this.categories.findIndex(c => c.Id === id);
-    if (index === -1) {
-      throw new Error("Category not found");
+    try {
+      this.ensureClient();
+      
+      const params = {
+        records: [{
+          Id: id,
+          Name: categoryData.name,
+          parent_id_c: categoryData.parentId || null,
+          icon_c: categoryData.icon || 'Box',
+          product_count_c: categoryData.productCount || 0
+        }]
+      };
+      
+      const response = await this.apperClient.updateRecord(this.tableName, params);
+      
+      if (!response.success) {
+        console.error(response.message);
+        toast.error(response.message);
+        throw new Error(response.message);
+      }
+      
+      if (response.results) {
+        const successful = response.results.filter(r => r.success);
+        const failed = response.results.filter(r => !r.success);
+        
+        if (failed.length > 0) {
+          console.error(`Failed to update ${failed.length} records:`, failed);
+          failed.forEach(record => {
+            if (record.errors) {
+              record.errors.forEach(error => toast.error(`${error.fieldLabel}: ${error}`));
+            }
+            if (record.message) toast.error(record.message);
+          });
+          throw new Error("Failed to update category");
+        }
+        
+        if (successful.length > 0) {
+          const item = successful[0].data;
+          return {
+            Id: item.Id,
+            name: item.Name,
+            parentId: item.parent_id_c || null,
+            icon: item.icon_c || 'Box',
+            productCount: item.product_count_c || 0
+          };
+        }
+      }
+      
+      throw new Error("Failed to update category");
+    } catch (error) {
+      console.error("Error updating category:", error?.response?.data?.message || error);
+      throw error;
     }
-    
-    this.categories[index] = {
-      ...this.categories[index],
-      ...categoryData,
-      Id: id
-    };
-    
-    return { ...this.categories[index] };
   }
 
   async delete(id) {
-    await this.delay();
-    const index = this.categories.findIndex(c => c.Id === id);
-    if (index === -1) {
-      throw new Error("Category not found");
+    try {
+      this.ensureClient();
+      
+      // First check if category has products
+      const category = await this.getById(id);
+      if (category.productCount > 0) {
+        toast.error("Cannot delete category with existing products");
+        return false;
+      }
+      
+      const params = { 
+        RecordIds: [id] 
+      };
+      
+      const response = await this.apperClient.deleteRecord(this.tableName, params);
+      
+      if (!response.success) {
+        console.error(response.message);
+        toast.error(response.message);
+        return false;
+      }
+      
+      if (response.results) {
+        const successful = response.results.filter(r => r.success);
+        const failed = response.results.filter(r => !r.success);
+        
+        if (failed.length > 0) {
+          console.error(`Failed to delete ${failed.length} records:`, failed);
+          failed.forEach(record => {
+            if (record.message) toast.error(record.message);
+          });
+          return false;
+        }
+        
+        return successful.length > 0;
+      }
+      
+      return false;
+    } catch (error) {
+      console.error("Error deleting category:", error?.response?.data?.message || error);
+      return false;
     }
-    
-    // Check if category has products
-    const category = this.categories[index];
-    if (category.productCount > 0) {
-      throw new Error("Cannot delete category with existing products");
-    }
-    
-    this.categories.splice(index, 1);
-    return { success: true };
   }
 
   async updateProductCount(categoryId, count) {
-    await this.delay();
-    const category = this.categories.find(c => c.Id === categoryId);
-    if (category) {
-      category.productCount = count;
+    try {
+      this.ensureClient();
+      
+      const category = await this.getById(categoryId);
+      if (category) {
+        return await this.update(categoryId, {
+          ...category,
+          productCount: count
+        });
+      }
+      return null;
+    } catch (error) {
+      console.error("Error updating product count:", error?.response?.data?.message || error);
+      return null;
     }
-    return category;
   }
 }
 
