@@ -6,10 +6,10 @@ import Button from "@/components/atoms/Button";
 import Badge from "@/components/atoms/Badge";
 import Loading from "@/components/ui/Loading";
 import Error from "@/components/ui/Error";
+import PriceHistoryTimeline from "@/components/molecules/PriceHistoryTimeline";
 import { productService } from "@/services/api/productService";
 import { categoryService } from "@/services/api/categoryService";
 import { formatCurrency, formatDate } from "@/utils/formatters";
-
 const ProductDetailsPage = () => {
   const { id } = useParams();
   const navigate = useNavigate();
@@ -234,7 +234,7 @@ const ProductDetailsPage = () => {
             </div>
           </div>
 
-          {/* Metadata Card */}
+{/* Metadata Card */}
           <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
             <h2 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
               <ApperIcon name="Calendar" className="w-5 h-5 mr-2 text-primary-600" />
@@ -259,6 +259,9 @@ const ProductDetailsPage = () => {
               </div>
             </div>
           </div>
+
+          {/* Price History Timeline */}
+          <PriceHistoryTimeline productId={product.Id} />
 
           {/* Quick Actions */}
           <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
